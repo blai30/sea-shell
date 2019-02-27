@@ -1,8 +1,8 @@
 # CSC 415 - Project 3 - My Shell
 
-## Student Name: Name here
+## Student Name: Brian Lai
 
-## Student ID: ID Here
+## Student ID: 916818167
 
 ## Build Instructions
 
