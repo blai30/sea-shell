@@ -26,12 +26,22 @@
 int main(int* argc, char** argv) {
 
     char user_input[BUFFERSIZE];
+    char *myargv[4];
+    int myargc;
 
-    do {
-        // print directory here
-        printf(" $ ");
-        scanf("%s");
-    } while (user_input != "exit");
+    printf(PROMPT);
+    scanf("%s", user_input);
+    printf("%s", user_input);
+
+    int i = 0;
+    myargv[i] = strtok(user_input, " ");
+    while (myargv[i] != NULL) {
+        myargv[++i] = strtok(user_input, " ");
+    }
+
+    for (int j = 0; j < sizeof(myargv); j++) {
+        printf("%s", myargv[j]);
+    }
 
     return 0;
 }
