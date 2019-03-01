@@ -1,7 +1,7 @@
 /****************************************************************
- * Name        :                                                *
+ * Name        :  Brian Lai                                     *
  * Class       :  CSC 415                                       *
- * Date        :                                                *
+ * Date        :  February 27, 2019                             *
  * Description :  Writting a simple bash shell program          *
  *                that will execute simple commands. The main   *
  *                goal of the assignment is working with        *
@@ -23,10 +23,15 @@
 #define PROMPT "myShell >> "
 #define PROMPTSIZE sizeof(PROMPT)
 
-int 
-main(int* argc, char** argv)
-{
+int main(int* argc, char** argv) {
 
-    
-return 0;
+    char user_input[BUFFERSIZE];
+
+    do {
+        // print directory here
+        printf(" $ ");
+        scanf("%s");
+    } while (user_input != "exit");
+
+    return 0;
 }
