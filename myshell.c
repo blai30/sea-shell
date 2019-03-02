@@ -34,8 +34,8 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-char** parse(char line) {
-    char* token = strtok(&line, " ");
+char** parse(char* line) {
+    char* token = strtok(line, " ");
     char** tokens = malloc(sizeof(char*) * BUFFERSIZE);
 
     int i = 0;
@@ -69,7 +69,10 @@ int main(int* argc, char** argv) {
             exit(0);
         }
 
-        myargv = parse(*buffer);
+        myargv = parse(buffer);
+        printf("%s\n", myargv[0]);
+        printf("%s\n", myargv[1]);
+        printf("%s\n", myargv[2]);
     }
 
     return 0;
