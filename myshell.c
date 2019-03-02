@@ -20,27 +20,56 @@
 /* CANNOT BE CHANGED */
 #define BUFFERSIZE 256
 /* --------------------*/
-#define PROMPT "myShell >> "
+#define PROMPT "myShell %s >> "
 #define PROMPTSIZE sizeof(PROMPT)
+
+void clear() {
+    printf("\033[H\033[J");
+}
+
+void print_dir() {
+    char cur_dir[1024];
+    getcwd(cur_dir, sizeof(cur_dir));
+
+    printf(PROMPT, cur_dir);
+}
+
+char** parse(char line) {
+    char* token = strtok(&line, " ");
+    char** tokens = malloc(sizeof(char*) * BUFFERSIZE);
+
+    int i = 0;
+    while (token != NULL) {
+        tokens[i] = token;
+        i++;
+        token = strtok(NULL, " ");
+    }
+
+    tokens[i] = "\0";
+
+    return tokens;
+}
 
 int main(int* argc, char** argv) {
 
-    char user_input[BUFFERSIZE];
-    char *myargv[4];
-    int myargc;
+    char buffer[BUFFERSIZE];
+    char** myargv;
 
-    printf(PROMPT);
-    scanf("%s", user_input);
-    printf("%s", user_input);
+    clear();
 
-    int i = 0;
-    myargv[i] = strtok(user_input, " ");
-    while (myargv[i] != NULL) {
-        myargv[++i] = strtok(user_input, " ");
-    }
+    while (1) {
+        print_dir();
 
-    for (int j = 0; j < sizeof(myargv); j++) {
-        printf("%s", myargv[j]);
+        fgets(buffer, BUFFERSIZE, stdin);
+        buffer[strcspn(buffer, "\n")] = 0;    // Clear \n
+
+        printf("%s\n", buffer);
+
+        if (strcmp(buffer, "exit") == 0) {
+            exit(0);
+        }
+
+        myargv = parse(*buffer);
     }
 
     return 0;
