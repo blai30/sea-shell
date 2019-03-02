@@ -54,6 +54,7 @@ int main(int* argc, char** argv) {
 
     char buffer[BUFFERSIZE];
     char** myargv;
+    int myargc;
 
     clear();
 
@@ -70,9 +71,9 @@ int main(int* argc, char** argv) {
         }
 
         myargv = parse(buffer);
+        myargc = (int) sizeof(myargv);
         printf("%s\n", myargv[0]);
-        printf("%s\n", myargv[1]);
-        printf("%s\n", myargv[2]);
+        printf("%d", myargc);
     }
 
     return 0;
