@@ -67,6 +67,8 @@ int main(int* argc, char** argv) {
         }
         myargv[myargc] = "\0";  // NULL terminate array
 
+        execvp(myargv[0], &myargv[1]);
+
         printf("%s\n", myargv[0]);
         printf("%d\n", myargc);
     }
