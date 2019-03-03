@@ -50,7 +50,7 @@ char** parse(char* line) {
     return tokens;
 }
 
-// should be int* argc
+// the project came as int* argc but the compiler complains
 int main(int* argc, char** argv) {
 
     char buffer[BUFFERSIZE];
