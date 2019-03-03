@@ -34,18 +34,19 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-char** parse(char* line) {
-    char* token = strtok(line, " ");
-    char** tokens = malloc(sizeof(char*) * BUFFERSIZE);
+char** parse(char* line, int** argc) {
+    char* token = strtok(line, " \n\t\r\v\f");
+    char** tokens = malloc(sizeof(char*) * 4);
 
     int i = 0;
     while (token != NULL) {
         tokens[i] = token;
         i++;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, " \n\t\r\v\f");
     }
 
     tokens[i] = "\0";
+    *argc = i;
 
     return tokens;
 }
@@ -55,7 +56,7 @@ int main(int* argc, char** argv) {
 
     char buffer[BUFFERSIZE];
     char** myargv;
-    int* myargc;
+    int* myargc = 0;
 
     clear();
 
@@ -63,7 +64,7 @@ int main(int* argc, char** argv) {
         print_dir();
 
         fgets(buffer, BUFFERSIZE, stdin);
-        buffer[strcspn(buffer, "\n")] = 0;    // Clear \n
+        buffer[strcspn(buffer, "\n")] = '\0';    // Clear \n
 
         printf("%s\n", buffer);
 
@@ -71,8 +72,8 @@ int main(int* argc, char** argv) {
             exit(0);
         }
 
-        myargv = parse(buffer);
-        myargc = (int*) (sizeof(myargv) / sizeof(char*));
+        myargv = parse(buffer, &myargc);
+
         printf("%s\n", myargv[0]);
         printf("%d\n", myargc);
     }
