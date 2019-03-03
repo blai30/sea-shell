@@ -34,45 +34,38 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-char** parse(char* line, int** argc) {
-    char* token = strtok(line, " \n\t\r\v\f");
-    char** tokens = malloc(sizeof(char*) * 4);
-
-    int i = 0;
-    while (token != NULL) {
-        tokens[i] = token;
-        i++;
-        token = strtok(NULL, " \n\t\r\v\f");
-    }
-
-    tokens[i] = "\0";
-    *argc = i;
-
-    return tokens;
-}
-
 // the project came as int* argc but the compiler complains
 int main(int* argc, char** argv) {
 
     char buffer[BUFFERSIZE];
-    char** myargv;
-    int* myargc = 0;
 
     clear();
 
     while (1) {
+        char** myargv = malloc(sizeof(char*) * 4);
+        int myargc = 0;
+
         print_dir();
 
+        // Read line of input
         fgets(buffer, BUFFERSIZE, stdin);
         buffer[strcspn(buffer, "\n")] = '\0';    // Clear \n
 
         printf("%s\n", buffer);
 
+        // End program
         if (strcmp(buffer, "exit") == 0) {
             exit(0);
         }
 
-        myargv = parse(buffer, &myargc);
+        // Parse buffer and count arguments
+        char* token = strtok(buffer, " \n\t\r\v\f");
+        while (token != NULL) {
+            myargv[myargc] = token;
+            myargc++;
+            token = strtok(NULL, " \n\t\r\v\f");
+        }
+        myargv[myargc] = "\0";  // NULL terminate array
 
         printf("%s\n", myargv[0]);
         printf("%d\n", myargc);
