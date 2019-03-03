@@ -50,11 +50,12 @@ char** parse(char* line) {
     return tokens;
 }
 
+// should be int* argc
 int main(int* argc, char** argv) {
 
     char buffer[BUFFERSIZE];
     char** myargv;
-    int myargc;
+    int* myargc;
 
     clear();
 
@@ -71,9 +72,9 @@ int main(int* argc, char** argv) {
         }
 
         myargv = parse(buffer);
-        myargc = (int) sizeof(myargv);
+        myargc = (int*) (sizeof(myargv) / sizeof(char*));
         printf("%s\n", myargv[0]);
-        printf("%d", myargc);
+        printf("%d\n", myargc);
     }
 
     return 0;
