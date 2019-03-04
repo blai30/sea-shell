@@ -34,8 +34,27 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
+void execute(char* argv) {
+    pid_t pid;
+    int status;
+
+    if ((pid = fork()) < 0) {
+        printf("Fork error: fork() < 0");
+        exit(1);
+    } else if (pid == 0) {
+        if (execvp(argv, &argv) < 0) {
+            printf("Execvp error: execvp(*argv, argv) < 0");
+            exit(1);
+        }
+    } else {
+        while (wait(&status) != pid) {
+            ;
+        }
+    }
+}
+
 // the project came as int* argc but the compiler complains
-int main(int* argc, char** argv) {
+int main(int argc, char** argv) {
 
     char buffer[BUFFERSIZE];
 
@@ -67,7 +86,7 @@ int main(int* argc, char** argv) {
         }
         myargv[myargc] = "\0";  // NULL terminate array
 
-        execvp(myargv[0], &myargv[1]);
+        execute(*myargv);
 
         printf("%s\n", myargv[0]);
         printf("%d\n", myargc);
