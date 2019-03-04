@@ -86,6 +86,7 @@ int main(int argc, char** argv) {
         }
         myargv[myargc] = "\0";  // NULL terminate array
 
+        // execvp with fork to not exit program
         execute(*myargv);
 
         printf("%s\n", myargv[0]);
