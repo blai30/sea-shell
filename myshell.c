@@ -34,7 +34,7 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-void execute(char* argv) {
+void execute(char** myargv) {
     pid_t pid;
     int status;
 
@@ -42,18 +42,17 @@ void execute(char* argv) {
         printf("Fork error: fork() < 0");
         exit(1);
     } else if (pid == 0) {
-        if (execvp(argv, &argv) < 0) {
-            printf("Execvp error: execvp(*argv, argv) < 0");
-            exit(1);
-        }
+        execvp(myargv[0], myargv);
+        perror("Execvp error");
     } else {
+        // need to add a case with &
         while (wait(&status) != pid) {
             ;
         }
     }
 }
 
-// the project came as int* argc but the compiler complains
+// the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
 
     char buffer[BUFFERSIZE];
@@ -87,7 +86,7 @@ int main(int argc, char** argv) {
         myargv[myargc] = "\0";  // NULL terminate array
 
         // execvp with fork to not exit program
-        execute(*myargv);
+        execute(myargv);
 
         printf("%s\n", myargv[0]);
         printf("%d\n", myargc);
