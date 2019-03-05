@@ -40,22 +40,23 @@ void execute(char** myargv) {
             perror("Enter a directory");
         }
         chdir(myargv[1]);
-        return;
-    }
-
-    pid_t pid = fork();
-    int status;
-
-    if (pid < 0) {
-        printf("Fork error: fork() < 0");
-        exit(1);
-    } else if (pid == 0) {
-        execvp(myargv[0], myargv);
-        perror("Execvp error");
+    } else if (strcmp(myargv[0], "pwd") == 0) {
+        char pwd[1024];
+        printf("%s\n", getcwd(pwd, sizeof(pwd)));
     } else {
-        // need to add a case with &
-        while (wait(&status) != pid) {
-            ;
+        pid_t pid = fork();
+        int status;
+
+        if (pid < 0) {
+            perror("Fork error: fork() < 0");
+            exit(1);
+        } else if (pid == 0) {
+            execvp(myargv[0], myargv);
+            perror("Execvp error");
+        } else {
+            // need to add a case with &
+            while (wait(&status) != pid) { ;
+            }
         }
     }
 }
@@ -96,9 +97,9 @@ int main(int argc, char** argv) {
         // execvp with fork to not exit program
         execute(myargv);
 
-        printf("%s\n", myargv[0]);
-        printf("%s\n", myargv[1]);
-        printf("%d\n", myargc);
+//        printf("%s\n", myargv[0]);
+//        printf("%s\n", myargv[1]);
+//        printf("%d\n", myargc);
     }
 
     return 0;
