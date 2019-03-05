@@ -35,10 +35,18 @@ void print_dir() {
 }
 
 void execute(char** myargv) {
-    pid_t pid;
+    if (strcmp(myargv[0], "cd") == 0) {
+        if (!myargv[1]) {
+            perror("Enter a directory");
+        }
+        chdir(myargv[1]);
+        return;
+    }
+
+    pid_t pid = fork();
     int status;
 
-    if ((pid = fork()) < 0) {
+    if (pid < 0) {
         printf("Fork error: fork() < 0");
         exit(1);
     } else if (pid == 0) {
@@ -67,7 +75,7 @@ int main(int argc, char** argv) {
 
         // Read line of input
         fgets(buffer, BUFFERSIZE, stdin);
-        buffer[strcspn(buffer, "\n")] = '\0';    // Clear \n
+        buffer[strcspn(buffer, "\n")] = 0;    // Clear \n
 
         printf("%s\n", buffer);
 
@@ -83,12 +91,13 @@ int main(int argc, char** argv) {
             myargc++;
             token = strtok(NULL, " \n\t\r\v\f");
         }
-        myargv[myargc] = "\0";  // NULL terminate array
+        myargv[myargc] = NULL;  // NULL terminate array
 
         // execvp with fork to not exit program
         execute(myargv);
 
         printf("%s\n", myargv[0]);
+        printf("%s\n", myargv[1]);
         printf("%d\n", myargc);
     }
 
