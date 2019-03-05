@@ -45,18 +45,16 @@ void execute(char** myargv) {
         printf("%s\n", getcwd(pwd, sizeof(pwd)));
     } else {
         pid_t pid = fork();
-        int status;
 
         if (pid < 0) {
             perror("Fork error: fork() < 0");
-            exit(1);
+            exit(EXIT_FAILURE);
         } else if (pid == 0) {
             execvp(myargv[0], myargv);
             perror("Execvp error");
         } else {
-            // need to add a case with &
-            while (wait(&status) != pid) { ;
-            }
+            int status;
+            waitpid(pid, &status, WNOHANG);
         }
     }
 }
@@ -82,7 +80,7 @@ int main(int argc, char** argv) {
 
         // End program
         if (strcmp(buffer, "exit") == 0) {
-            exit(0);
+            exit(EXIT_SUCCESS);
         }
 
         // Parse buffer and count arguments
