@@ -34,12 +34,37 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-void execute(char** myargv, int myargc) {
-    // If no command was entered
-    if (myargv[0] == NULL) {
-        return;
+void cd(char** arg_v) {
+    if (!arg_v[1]) {
+        printf("Enter a directory for cd\n");
+    } else {
+        chdir(arg_v[1]);
     }
+}
 
+void pwd() {
+    char pwd[1024];
+    printf("%s\n", getcwd(pwd, sizeof(pwd)));
+}
+
+// Parse buffer and count arguments
+char** parse_buffer(char* buf, int *arg_c) {
+    char** tokens = malloc(sizeof(char*) * 4);
+    char* token = strtok(buf, " \n\t\r\v\f");
+    int count = 0;
+    while (token != NULL) {
+        tokens[count] = token;
+        count++;
+        token = strtok(NULL, " \n\t\r\v\f");
+    }
+    tokens[count] = NULL;  // NULL terminate array
+    *arg_c = count;
+
+    return tokens;
+}
+
+// Execute command and arguments
+void execute(char** arg_v, int arg_c) {
 //    int in = 0;
 //    int out = 1;
 
@@ -72,46 +97,20 @@ void execute(char** myargv, int myargc) {
 //        out = 0;
 //    }
 
-    if (strcmp(myargv[0], "cd") == 0) {
-        if (!myargv[1]) {
-            perror("Enter a directory");
-        } else {
-            chdir(myargv[1]);
-        }
-    } else if (strcmp(myargv[0], "pwd") == 0) {
-        char pwd[1024];
-        printf("%s\n", getcwd(pwd, sizeof(pwd)));
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("Fork error: fork() < 0");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        execvp(arg_v[0], arg_v);
+        perror("Execvp error");
     } else {
-        pid_t pid = fork();
-
-        if (pid < 0) {
-            perror("Fork error: fork() < 0");
-            exit(EXIT_FAILURE);
-        } else if (pid == 0) {
-            execvp(myargv[0], myargv);
-            perror("Execvp error");
-        } else {
-            int status;
-            waitpid(pid, &status, 0);
-        }
+        int status;
+        waitpid(pid, &status, 0);
     }
 }
 
-// Parse buffer and count arguments
-char** parse_buffer(char* buf, int *arg_c) {
-    char** tokens = malloc(sizeof(char*) * 4);
-    char* token = strtok(buf, " \n\t\r\v\f");
-    int count = 0;
-    while (token != NULL) {
-        tokens[count] = token;
-        count++;
-        token = strtok(NULL, " \n\t\r\v\f");
-    }
-    tokens[count] = NULL;  // NULL terminate array
-    *arg_c = count;
-
-    return tokens;
-}
 
 // the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
@@ -135,8 +134,16 @@ int main(int argc, char** argv) {
         int myargc = 0;
         char** myargv = parse_buffer(buffer, &myargc);
 
-        // execvp with fork to not exit program
-        execute(myargv, myargc);
+        if (myargv[0] == NULL) {
+            continue;
+        } else if (strcmp(myargv[0], "cd") == 0) {
+            cd(myargv);
+        } else if (strcmp(myargv[0], "pwd") == 0) {
+            pwd();
+        } else {
+            // execvp with fork to not exit program
+            execute(myargv, myargc);
+        }
     }
 
     return 0;
