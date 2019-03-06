@@ -34,17 +34,50 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-int execute(char** myargv) {
+int execute(char** myargv, int myargc) {
     // If no command was entered
     if (myargv[0] == NULL) {
         return 1;
     }
 
+//    int in = 0;
+//    int out = 1;
+
+//    for (int i = 0; i < myargc; i++) {
+//        if (strcmp(myargv[i], ">") == 0) {
+//
+//        }
+//    }
+
+//    if (in) {
+//        int fdin = open(filein, O_RDONLY);
+//        if (filein < 0) {
+//            printf("Open for input failed: %s\n", filein);
+//            exit(EXIT_FAILURE);
+//        }
+//        dup(fdin);
+//        close(fdin);
+//        in = 0;
+//    }
+
+//    char* fileout = myargv[2];
+//    if (out) {
+//        int fdout = open(fileout, O_TRUNC | O_CREAT | O_WRONLY, S_IWUSR);
+//        if (fileout < 0) {
+//            printf("Open for output failed: %s\n", fileout);
+//            exit(EXIT_FAILURE);
+//        }
+//        dup(fdout);
+//        close(fdout);
+//        out = 0;
+//    }
+
     if (strcmp(myargv[0], "cd") == 0) {
         if (!myargv[1]) {
             perror("Enter a directory");
+        } else {
+            chdir(myargv[1]);
         }
-        chdir(myargv[1]);
     } else if (strcmp(myargv[0], "pwd") == 0) {
         char pwd[1024];
         printf("%s\n", getcwd(pwd, sizeof(pwd)));
@@ -66,6 +99,21 @@ int execute(char** myargv) {
     return 1;
 }
 
+// Parse buffer and count arguments
+char** parse_buffer(char* buf, int *arg_c) {
+    char** tokens = malloc(sizeof(char*) * 4);
+    char* token = strtok(buf, " \n\t\r\v\f");
+    int count = 0;
+    while (token != NULL) {
+        count++;
+        token = strtok(NULL, " \n\t\r\v\f");
+    }
+    tokens[count] = NULL;  // NULL terminate array
+    *arg_c = count;
+
+    return tokens;
+}
+
 // the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
 
@@ -74,39 +122,28 @@ int main(int argc, char** argv) {
     clear();
 
     while (1) {
-        char** myargv = malloc(sizeof(char*) * 4);
-        int myargc = 0;
-
         print_dir();
 
         // Read line of input
         fgets(buffer, BUFFERSIZE, stdin);
         buffer[strcspn(buffer, "\n")] = 0;    // Clear \n
 
-        printf("%s\n", buffer);
-
         // End program
         if (strcmp(buffer, "exit") == 0) {
             exit(EXIT_SUCCESS);
         }
 
-        // Parse buffer and count arguments
-        char* token = strtok(buffer, " \n\t\r\v\f");
-        while (token != NULL) {
-            myargv[myargc] = token;
-            myargc++;
-            token = strtok(NULL, " \n\t\r\v\f");
-        }
-        myargv[myargc] = NULL;  // NULL terminate array
+        int myargc = 0;
+        char** myargv = parse_buffer(buffer, &myargc);
+
+        printf("myargc = %d\n", myargc);
 
         // execvp with fork to not exit program
-        execute(myargv);
-
-//        printf("%s\n", myargv[0]);
-//        printf("%s\n", myargv[1]);
-//        printf("%d\n", myargc);
-        free(myargv);
+        execute(myargv, myargc);
     }
 
     return 0;
 }
+
+
+////// null terminate before < > << >>
