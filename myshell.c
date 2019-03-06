@@ -103,6 +103,7 @@ char** parse_buffer(char* buf, int *arg_c) {
     char* token = strtok(buf, " \n\t\r\v\f");
     int count = 0;
     while (token != NULL) {
+        tokens[count] = token;
         count++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
@@ -134,8 +135,6 @@ int main(int argc, char** argv) {
         int myargc = 0;
         char** myargv = parse_buffer(buffer, &myargc);
 
-        printf("myargc = %d\n", myargc);
-
         // execvp with fork to not exit program
         execute(myargv, myargc);
     }
@@ -144,4 +143,4 @@ int main(int argc, char** argv) {
 }
 
 
-////// null terminate before < > << >>
+////// TODO null terminate before < > << >>
