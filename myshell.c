@@ -34,10 +34,10 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-int execute(char** myargv, int myargc) {
+void execute(char** myargv, int myargc) {
     // If no command was entered
     if (myargv[0] == NULL) {
-        return 1;
+        return;
     }
 
 //    int in = 0;
@@ -95,8 +95,6 @@ int execute(char** myargv, int myargc) {
             waitpid(pid, &status, 0);
         }
     }
-
-    return 1;
 }
 
 // Parse buffer and count arguments
