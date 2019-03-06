@@ -34,7 +34,12 @@ void print_dir() {
     printf(PROMPT, cur_dir);
 }
 
-void execute(char** myargv) {
+int execute(char** myargv) {
+    // If no command was entered
+    if (myargv[0] == NULL) {
+        return 1;
+    }
+
     if (strcmp(myargv[0], "cd") == 0) {
         if (!myargv[1]) {
             perror("Enter a directory");
@@ -54,9 +59,11 @@ void execute(char** myargv) {
             perror("Execvp error");
         } else {
             int status;
-            waitpid(pid, &status, WNOHANG);
+            waitpid(pid, &status, 0);
         }
     }
+
+    return 1;
 }
 
 // the project came as int* argc but Souza confirmed it should be int argc
@@ -98,6 +105,7 @@ int main(int argc, char** argv) {
 //        printf("%s\n", myargv[0]);
 //        printf("%s\n", myargv[1]);
 //        printf("%d\n", myargc);
+        free(myargv);
     }
 
     return 0;
