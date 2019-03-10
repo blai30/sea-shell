@@ -46,6 +46,7 @@ void print_dir() {
     }
 }
 
+// Change current working directory
 void cd(char** arg_v) {
     if (strcmp(arg_v[1], "~") == 0) {
         chdir(getenv("HOME"));
@@ -56,6 +57,7 @@ void cd(char** arg_v) {
     }
 }
 
+// Print current working directory full path
 void pwd() {
     char pwd[1024];
     printf("%s\n", getcwd(pwd, sizeof(pwd)));
@@ -129,11 +131,12 @@ void execute(char** arg_v, int arg_c) {
 // the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
 
-    char buffer[BUFFERSIZE];
+
 
     clear();
 
     while (1) {
+        char buffer[BUFFERSIZE];
         print_dir();
 
         // Read line of input
