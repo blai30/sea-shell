@@ -23,6 +23,8 @@
 #define PROMPT "myShell %s >> "
 #define PROMPTSIZE sizeof(PROMPT)
 
+int run_in_bg_flag;
+
 void clear() {
     printf("\033[H\033[J");
 }
@@ -48,10 +50,10 @@ void print_dir() {
 
 // Change current working directory
 void cd(char** arg_v) {
-    if (strcmp(arg_v[1], "~") == 0) {
-        chdir(getenv("HOME"));
-    } else if (!arg_v[1]) {
+    if (!arg_v[1]) {
         printf("Enter a directory for cd\n");
+    } else if (strcmp(arg_v[1], "~") == 0) {
+        chdir(getenv("HOME"));
     } else {
         chdir(arg_v[1]);
     }
@@ -69,7 +71,13 @@ char** parse_buffer(char* buf, int *arg_c) {
     char* token = strtok(buf, " \n\t\r\v\f");
     int count = 0;
     while (token != NULL) {
-        tokens[count] = token;
+        // Check for amperstand to run in background
+        if (strcmp(token, "&") == 0) {
+            run_in_bg_flag = 1;
+            break;
+        } else {
+            tokens[count] = token;
+        }
         count++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
@@ -122,21 +130,23 @@ void execute(char** arg_v, int arg_c) {
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
     } else {
-        int status;
-        waitpid(pid, &status, 0);
+        if (!run_in_bg_flag) {
+            int status;
+            waitpid(pid, &status, 0);
+        }
     }
 }
-
 
 // the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
 
-
-
     clear();
 
     while (1) {
+        // Reset buffer and flag
         char buffer[BUFFERSIZE];
+        run_in_bg_flag = 0;
+
         print_dir();
 
         // Read line of input
