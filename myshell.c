@@ -29,13 +29,27 @@ void clear() {
 
 void print_dir() {
     char cur_dir[1024];
+    char* home_path = getenv("HOME");
     getcwd(cur_dir, sizeof(cur_dir));
 
-    printf(PROMPT, cur_dir);
+    // Replace home path with ~ when printing current working directory
+    char *p;
+    if ((p = strstr(cur_dir, home_path))) {
+        char new_str[1024];
+        strncpy(new_str, cur_dir, p - cur_dir);
+        new_str[p - cur_dir] = '\0';
+        sprintf(new_str + (p - cur_dir), "%s%s", "~", p + strlen(home_path));
+        printf(PROMPT, new_str);
+    } else {
+        // Print current working directory full path
+        printf(PROMPT, cur_dir);
+    }
 }
 
 void cd(char** arg_v) {
-    if (!arg_v[1]) {
+    if (strcmp(arg_v[1], "~") == 0) {
+        chdir(getenv("HOME"));
+    } else if (!arg_v[1]) {
         printf("Enter a directory for cd\n");
     } else {
         chdir(arg_v[1]);
