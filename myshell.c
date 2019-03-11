@@ -27,7 +27,7 @@ int run_in_bg_flag;
 int rd_output;
 int rd_output_append;
 int rd_input;
-char* outfile;
+char* rd_file;
 
 void clear() {
     printf("\033[H\033[J");
@@ -144,10 +144,11 @@ void execute(char** arg_v, int arg_c) {
             for (int i = 0; ; i++) {
                 if (strcmp(arg_v[i], ">") == 0) {
                     // Filename is after >
-                    outfile = arg_v[i + 1];
+                    rd_file = arg_v[i + 1];
                     arg_v[i] = NULL;
-                    int fd_out = creat(outfile, 0644);
+                    int fd_out = creat(rd_file, 0644);
                     dup2(fd_out, 1);
+                    close(fd_out);
                     break;
                 }
             }
@@ -158,10 +159,26 @@ void execute(char** arg_v, int arg_c) {
             for (int i = 0; ; i++) {
                 if (strcmp(arg_v[i], ">>") == 0) {
                     // Filename is after >>
-                    outfile = arg_v[i + 1];
+                    rd_file = arg_v[i + 1];
                     arg_v[i] = NULL;
-                    int fd_out = open(outfile, O_WRONLY | O_CREAT | O_APPEND, 0644);
+                    int fd_out = open(rd_file, O_WRONLY | O_CREAT | O_APPEND, 0644);
                     dup2(fd_out, 1);
+                    close(fd_out);
+                    break;
+                }
+            }
+        }
+
+        // Input redirection
+        if (rd_input) {
+            for (int i = 0; ; i++) {
+                if (strcmp(arg_v[i], "<") == 0) {
+                    // Filename is after <
+                    rd_file = arg_v[i + 1];
+                    arg_v[i] = NULL;
+                    int fd_in = open(rd_file, O_RDONLY);
+                    dup2(fd_in, 0);
+                    close(fd_in);
                     break;
                 }
             }
@@ -189,7 +206,7 @@ int main(int argc, char** argv) {
         rd_output = 0;
         rd_output_append = 0;
         rd_input = 0;
-        outfile = NULL;
+        rd_file = NULL;
 
         print_dir();
 
