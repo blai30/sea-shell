@@ -27,6 +27,7 @@ int run_in_bg_flag;
 int rd_output;
 int rd_output_append;
 int rd_input;
+int do_pipe;
 char* rd_file;
 
 void clear() {
@@ -70,10 +71,9 @@ void pwd() {
 }
 
 // Parse buffer and count arguments
-char** parse_buffer(char* buf, int *arg_c) {
+char** parse_buffer(char* buf, int* arg_c) {
     char** tokens = malloc(sizeof(char*) * 4);
     char* token = strtok(buf, " \n\t\r\v\f");
-    int count = 0;
     while (token != NULL) {
         if (strcmp(token, ">") == 0) {
             rd_output = 1;
@@ -81,17 +81,19 @@ char** parse_buffer(char* buf, int *arg_c) {
             rd_output_append = 1;
         } else if (strcmp(token, "<") == 0) {
             rd_input = 1;
+        } else if (strcmp(token, "|") == 0) {
+            do_pipe = 1;
         } else if (strcmp(token, "&") == 0) {
             run_in_bg_flag = 1;
             break;
         }
-        tokens[count] = token;
-        count++;
+        // arg_c starts at 0
+        tokens[*arg_c] = token;
+        *arg_c += 1;
         token = strtok(NULL, " \n\t\r\v\f");
     }
 
-    tokens[count] = NULL;  // NULL terminate array
-    *arg_c = count;
+    tokens[*arg_c] = NULL;  // NULL terminate array
 
     return tokens;
 }
@@ -150,6 +152,11 @@ void execute(char** arg_v, int arg_c) {
             }
         }
 
+        // Pipe
+        if (do_pipe) {
+
+        }
+
         // Execute program or throw error if it fails
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
@@ -173,6 +180,7 @@ int main(int argc, char** argv) {
         rd_output = 0;
         rd_output_append = 0;
         rd_input = 0;
+        do_pipe = 0;
         rd_file = NULL;
 
         print_dir();
