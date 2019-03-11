@@ -24,6 +24,9 @@
 #define PROMPTSIZE sizeof(PROMPT)
 
 int run_in_bg_flag;
+int rd_output;
+int rd_output_append;
+int rd_input;
 
 void clear() {
     printf("\033[H\033[J");
@@ -71,8 +74,10 @@ char** parse_buffer(char* buf, int *arg_c) {
     char* token = strtok(buf, " \n\t\r\v\f");
     int count = 0;
     while (token != NULL) {
-        // Check for amperstand to run in background
-        if (strcmp(token, "&") == 0) {
+        if (strcmp(token, ">") == 0) {
+            rd_output = 1;
+            tokens[count] = token;
+        } else if (strcmp(token, "&") == 0) {
             run_in_bg_flag = 1;
             break;
         } else {
@@ -81,6 +86,7 @@ char** parse_buffer(char* buf, int *arg_c) {
         count++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
+
     tokens[count] = NULL;  // NULL terminate array
     *arg_c = count;
 
@@ -121,12 +127,27 @@ void execute(char** arg_v, int arg_c) {
 //        out = 0;
 //    }
 
+
+
+    // Execute normally with no redirection
     pid_t pid = fork();
 
     if (pid < 0) {
         perror("Fork error: fork() < 0");
         exit(EXIT_FAILURE);
     } else if (pid == 0) {
+        if (rd_output) {
+            for (int i = 0; ; i++) {
+                if (strcmp(arg_v[i], ">") == 0) {
+                    char* outfile = arg_v[i + 1];
+                    printf("%s", arg_v[i + 1]);
+                    arg_v[i] = NULL;
+                    int fd_out = creat(outfile, 0644);
+                    dup2(fd_out, 1);
+                    break;
+                }
+            }
+        }
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
     } else {
@@ -146,6 +167,9 @@ int main(int argc, char** argv) {
         // Reset buffer and flag
         char buffer[BUFFERSIZE];
         run_in_bg_flag = 0;
+        rd_output = 0;
+        rd_output_append = 0;
+        rd_input = 0;
 
         print_dir();
 
@@ -160,6 +184,10 @@ int main(int argc, char** argv) {
 
         int myargc = 0;
         char** myargv = parse_buffer(buffer, &myargc);
+
+        if (rd_output) {
+            int rd_argc = 0;
+        }
 
         if (myargv[0] == NULL) {
             continue;
