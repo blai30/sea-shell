@@ -98,41 +98,7 @@ char** parse_buffer(char* buf, int *arg_c) {
 
 // Execute command and arguments
 void execute(char** arg_v, int arg_c) {
-//    int in = 0;
-//    int out = 1;
-
-//    for (int i = 0; i < myargc; i++) {
-//        if (strcmp(myargv[i], ">") == 0) {
-//
-//        }
-//    }
-
-//    if (in) {
-//        int fdin = open(filein, O_RDONLY);
-//        if (filein < 0) {
-//            printf("Open for input failed: %s\n", filein);
-//            exit(EXIT_FAILURE);
-//        }
-//        dup(fdin);
-//        close(fdin);
-//        in = 0;
-//    }
-
-//    char* fileout = myargv[2];
-//    if (out) {
-//        int fdout = open(fileout, O_TRUNC | O_CREAT | O_WRONLY, S_IWUSR);
-//        if (fileout < 0) {
-//            printf("Open for output failed: %s\n", fileout);
-//            exit(EXIT_FAILURE);
-//        }
-//        dup(fdout);
-//        close(fdout);
-//        out = 0;
-//    }
-
-
-
-    // Execute normally with no redirection
+    int status;
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -184,11 +150,12 @@ void execute(char** arg_v, int arg_c) {
             }
         }
 
+        // Execute program or throw error if it fails
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
     } else {
+        // The run-in-background flag '&' will prevent waiting
         if (!run_in_bg_flag) {
-            int status;
             waitpid(pid, &status, 0);
         }
     }
@@ -236,6 +203,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-
-////// TODO null terminate before < > << >>
