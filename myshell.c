@@ -154,7 +154,33 @@ void execute(char** arg_v, int arg_c) {
 
         // Pipe
         if (do_pipe) {
+            for (int i = 0; ; i++) {
+                if (strcmp(arg_v[i], "|") == 0) {
+                    // Split arg_v into two arrays
+                    int pipe_fd[2];
+                    char** left_side = malloc(i * sizeof(char));
+                    char** right_side = malloc((arg_c - i) * sizeof(char));
 
+                    arg_v[i] = NULL;
+
+                    left_side = arg_v;
+                    right_side = arg_v + i;
+
+                    pipe(pipe_fd);
+
+                    dup2(pipe_fd[0], 0);
+                    close(pipe_fd[1]);
+                    close(pipe_fd[0]);
+                    execvp(right_side[0], right_side);
+
+                    dup2(pipe_fd[1],1);
+                    close(pipe_fd[1]);
+                    close(pipe_fd[0]);
+                    execvp(left_side[0],left_side);
+
+                    break;
+                }
+            }
         }
 
         // Execute program or throw error if it fails
