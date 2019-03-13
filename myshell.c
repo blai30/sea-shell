@@ -103,34 +103,55 @@ void execute_pipe(char** arg_v, int arg_c) {
         if (strcmp(arg_v[i], "|") == 0) {
             // Split arg_v into two arrays
             int pipe_fd[2]; /* [0] read end [1] write end */
-            char* left_side[i];
-            char* right_side[arg_c - i - 1];
+            int left_argc = i;
+            int right_argc = arg_c - i - 1;
+            char* left_side[left_argc];
+            char* right_side[right_argc];
+            int status;
+            pid_t pid;
 
             arg_v[i] = NULL;
 
-            memcpy(left_side, arg_v, i * sizeof(char*));
-            memcpy(right_side, &arg_v[i + 1], (arg_c - i - 1) * sizeof(char*));
+            memcpy(left_side, arg_v, left_argc * sizeof(char*));
+            memcpy(right_side, &arg_v[i], right_argc * sizeof(char*));
 
             left_side[i] = NULL;
 
             pipe(pipe_fd);
-            printf("1 : %d\n", getpid());
-            if (fork()) {
+            pid = fork();
+
+            if (pid == 0) {
                 dup2(pipe_fd[0], 0);
                 close(pipe_fd[1]);
                 close(pipe_fd[0]);
                 execvp(right_side[0], right_side);
                 perror("Execvp error");
+            } else if (pid < 0) {
+                perror("Fork error: fork() < 0");
+                exit(EXIT_FAILURE);
+            } else {
+                if (!run_in_bg_flag) {
+                    waitpid(pid, &status, 0);
+                }
             }
-            printf("2 : %d\n", getpid());
-            if (fork()) {
+
+            pid = fork();
+
+            if (pid == 0) {
                 dup2(pipe_fd[1], 1);
                 close(pipe_fd[1]);
                 close(pipe_fd[0]);
                 execvp(left_side[0], left_side);
                 perror("Execvp error");
+            } else if (pid < 0) {
+                perror("Fork error: fork() < 0");
+                exit(EXIT_FAILURE);
+            } else {
+                if (!run_in_bg_flag) {
+                    waitpid(pid, &status, 0);
+                }
             }
-            printf("3 : %d\n", getpid());
+
             break;
         }
     }
