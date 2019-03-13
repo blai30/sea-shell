@@ -115,7 +115,8 @@ void execute_pipe(char** arg_v, int arg_c) {
             memcpy(left_side, arg_v, left_argc * sizeof(char*));
             memcpy(right_side, &arg_v[i], right_argc * sizeof(char*));
 
-            left_side[i] = NULL;
+            left_side[left_argc] = NULL;
+            right_side[right_argc] = NULL;
 
             pipe(pipe_fd);
             pid = fork();
@@ -263,6 +264,8 @@ int main(int argc, char** argv) {
             // execvp with fork to not exit program
             execute(myargv, myargc);
         }
+
+        free(myargv);
     }
 
     return 0;
