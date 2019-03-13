@@ -123,8 +123,8 @@ void execute_pipe(char** arg_v, int arg_c) {
 
             if (pid == 0) {
                 dup2(pipe_fd[0], 0);
-                close(pipe_fd[1]);
-                close(pipe_fd[0]);
+//                close(pipe_fd[1]);
+//                close(pipe_fd[0]);
                 execvp(right_side[0], right_side);
                 perror("Execvp error");
             } else if (pid < 0) {
@@ -140,8 +140,8 @@ void execute_pipe(char** arg_v, int arg_c) {
 
             if (pid == 0) {
                 dup2(pipe_fd[1], 1);
-                close(pipe_fd[1]);
-                close(pipe_fd[0]);
+//                close(pipe_fd[1]);
+//                close(pipe_fd[0]);
                 execvp(left_side[0], left_side);
                 perror("Execvp error");
             } else if (pid < 0) {
@@ -176,7 +176,7 @@ void execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_out = creat(rd_file, 0644);
                     dup2(fd_out, 1);
-                    close(fd_out);
+//                    close(fd_out);
                     break;
                 }
             }
@@ -191,7 +191,7 @@ void execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_out = open(rd_file, O_WRONLY | O_CREAT | O_APPEND, 0644);
                     dup2(fd_out, 1);
-                    close(fd_out);
+//                    close(fd_out);
                     break;
                 }
             }
@@ -206,7 +206,7 @@ void execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_in = open(rd_file, O_RDONLY);
                     dup2(fd_in, 0);
-                    close(fd_in);
+//                    close(fd_in);
                     break;
                 }
             }
