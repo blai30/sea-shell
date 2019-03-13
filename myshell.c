@@ -102,7 +102,7 @@ void execute_pipe(char** arg_v, int arg_c) {
     for (int i = 0; ; i++) {
         if (strcmp(arg_v[i], "|") == 0) {
             // Split arg_v into two arrays
-            int pipe_fd[2];
+            int pipe_fd[2]; /* [0] read end [1] write end */
             char* left_side[i];
             char* right_side[arg_c - i - 1];
 
