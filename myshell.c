@@ -98,6 +98,44 @@ char** parse_buffer(char* buf, int* arg_c) {
     return tokens;
 }
 
+void execute_pipe(char** arg_v, int arg_c) {
+    for (int i = 0; ; i++) {
+        if (strcmp(arg_v[i], "|") == 0) {
+            // Split arg_v into two arrays
+            int pipe_fd[2];
+            char* left_side[i];
+            char* right_side[arg_c - i - 1];
+
+            arg_v[i] = NULL;
+
+            memcpy(left_side, arg_v, i * sizeof(char*));
+            memcpy(right_side, &arg_v[i + 1], (arg_c - i - 1) * sizeof(char*));
+
+            left_side[i] = NULL;
+
+            pipe(pipe_fd);
+            printf("1 : %d\n", getpid());
+            if (fork()) {
+                dup2(pipe_fd[0], 0);
+                close(pipe_fd[1]);
+                close(pipe_fd[0]);
+                execvp(right_side[0], right_side);
+                perror("Execvp error");
+            }
+            printf("2 : %d\n", getpid());
+            if (fork()) {
+                dup2(pipe_fd[1], 1);
+                close(pipe_fd[1]);
+                close(pipe_fd[0]);
+                execvp(left_side[0], left_side);
+                perror("Execvp error");
+            }
+            printf("3 : %d\n", getpid());
+            break;
+        }
+    }
+}
+
 // Execute command and arguments
 void execute(char** arg_v, int arg_c) {
     int status;
@@ -152,37 +190,6 @@ void execute(char** arg_v, int arg_c) {
             }
         }
 
-        // Pipe
-        if (do_pipe) {
-            for (int i = 0; ; i++) {
-                if (strcmp(arg_v[i], "|") == 0) {
-                    // Split arg_v into two arrays
-                    int pipe_fd[2];
-                    char** left_side = malloc(i * sizeof(char));
-                    char** right_side = malloc((arg_c - i) * sizeof(char));
-
-                    arg_v[i] = NULL;
-
-                    left_side = arg_v;
-                    right_side = arg_v + i;
-
-                    pipe(pipe_fd);
-
-                    dup2(pipe_fd[0], 0);
-                    close(pipe_fd[1]);
-                    close(pipe_fd[0]);
-                    execvp(right_side[0], right_side);
-
-                    dup2(pipe_fd[1],1);
-                    close(pipe_fd[1]);
-                    close(pipe_fd[0]);
-                    execvp(left_side[0],left_side);
-
-                    break;
-                }
-            }
-        }
-
         // Execute program or throw error if it fails
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
@@ -229,6 +236,8 @@ int main(int argc, char** argv) {
             cd(myargv);
         } else if (strcmp(myargv[0], "pwd") == 0) {
             pwd();
+        } else if (do_pipe) {
+            execute_pipe(myargv, myargc);
         } else {
             // execvp with fork to not exit program
             execute(myargv, myargc);
