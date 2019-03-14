@@ -72,7 +72,7 @@ void pwd() {
 
 // Parse buffer and count arguments
 char** parse_buffer(char* buf) {
-    char** tokens = malloc(sizeof(char*) * 4);
+    char** tokens = calloc(9, sizeof(*tokens));
     char* token = strtok(buf, " \n\t\r\v\f");
     int index = 0;
     while (token != NULL) {
@@ -93,7 +93,7 @@ char** parse_buffer(char* buf) {
         index++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
-
+    free(tokens[index]);
     tokens[index] = NULL;  // NULL terminate array
 
     return tokens;
@@ -109,16 +109,18 @@ int count_argc(char** arg_v) {
 }
 
 // Split the array into arrays used for pipe. The offset parameter allows this function to be reused
-char** divide_argv(char** arg_v, int* offset) {
-    char** new_argv = malloc(sizeof(char*) * 4);
+char** divide_argv(char** arg_v, int arg_c, int* offset) {
+    char** new_argv = calloc(5, sizeof(*new_argv));
 
     int i;
-    for (i = *offset; strcmp(arg_v[i], "|") != 0; i++) {
-        if (arg_v[i] == NULL) {
-            break;
-        }
+    for (i = *offset; strcmp(arg_v[i], "|") != 0 || i < arg_c; i++) {
         new_argv[i] = arg_v[i];
     }
+
+//    ptrdiff_t len = (strchr(*arg_v,'|') - *arg_v) * sizeof(char*);
+//    strncpy(*new_argv, *arg_v, len);
+
+    free(new_argv[i]);
     new_argv[i] = NULL;
 
     *offset = i;
@@ -126,65 +128,46 @@ char** divide_argv(char** arg_v, int* offset) {
 }
 
 int execute_pipe(char** left_side, char** right_side) {
-//    for (int i = 0; ; i++) {
-//        if (strcmp(arg_v[i], "|") == 0) {
-            // Split arg_v into two arrays
-            int pipe_fd[2]; /* [0] read end [1] write end */
-//            int left_argc = i;
-//            int right_argc = arg_c - i - 1;
-//            char* left_side[left_argc];
-//            char* right_side[right_argc];
-            int status;
-            pid_t pid;
+    int pipe_fd[2]; /* [0] read end [1] write end */
+    int status;
+    pid_t pid;
 
-//            arg_v[i] = NULL;
+    pipe(pipe_fd);
+    pid = fork();
 
-//            memcpy(left_side, arg_v, left_argc * sizeof(char*));
-//            memcpy(right_side, &arg_v[i], right_argc * sizeof(char*));
-//
-//            left_side[left_argc] = NULL;
-//            right_side[right_argc] = NULL;
+    if (pid == 0) {
+        dup2(pipe_fd[0], 0);
+        close(pipe_fd[1]);
+        close(pipe_fd[0]);
+        execvp(right_side[0], right_side);
+        perror("Execvp error");
+        return -1;
+    } else if (pid < 0) {
+        perror("Fork error: fork() < 0");
+        return -1;
+    } else {
+        if (!run_in_bg_flag) {
+            waitpid(pid, &status, 0);
+        }
+    }
 
-            pipe(pipe_fd);
-            pid = fork();
+    pid = fork();
 
-            if (pid == 0) {
-                dup2(pipe_fd[0], 0);
-                close(pipe_fd[1]);
-                close(pipe_fd[0]);
-                execvp(right_side[0], right_side);
-                perror("Execvp error");
-                return -1;
-            } else if (pid < 0) {
-                perror("Fork error: fork() < 0");
-                return -1;
-            } else {
-                if (!run_in_bg_flag) {
-                    waitpid(pid, &status, 0);
-                }
-            }
-
-            pid = fork();
-
-            if (pid == 0) {
-                dup2(pipe_fd[1], 1);
-                close(pipe_fd[1]);
-                close(pipe_fd[0]);
-                execvp(left_side[0], left_side);
-                perror("Execvp error");
-                return -1;
-            } else if (pid < 0) {
-                perror("Fork error: fork() < 0");
-                return -1;
-            } else {
-                if (!run_in_bg_flag) {
-                    waitpid(pid, &status, 0);
-                }
-            }
-
-//            break;
-//        }
-//    }
+    if (pid == 0) {
+        dup2(pipe_fd[1], 1);
+        close(pipe_fd[1]);
+        close(pipe_fd[0]);
+        execvp(left_side[0], left_side);
+        perror("Execvp error");
+        return -1;
+    } else if (pid < 0) {
+        perror("Fork error: fork() < 0");
+        return -1;
+    } else {
+        if (!run_in_bg_flag) {
+            waitpid(pid, &status, 0);
+        }
+    }
 
     return 0;
 }
@@ -207,7 +190,7 @@ int execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_out = creat(rd_file, 0644);
                     dup2(fd_out, 1);
-//                    close(fd_out);
+                    close(fd_out);
                     break;
                 }
             }
@@ -222,7 +205,7 @@ int execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_out = open(rd_file, O_WRONLY | O_CREAT | O_APPEND, 0644);
                     dup2(fd_out, 1);
-//                    close(fd_out);
+                    close(fd_out);
                     break;
                 }
             }
@@ -237,7 +220,7 @@ int execute(char** arg_v, int arg_c) {
                     arg_v[i] = NULL;
                     int fd_in = open(rd_file, O_RDONLY);
                     dup2(fd_in, 0);
-//                    close(fd_in);
+                    close(fd_in);
                     break;
                 }
             }
@@ -294,9 +277,9 @@ int main(int argc, char** argv) {
             pwd();
         } else if (do_pipe) {
             int offset = 0;
-            char** left_argv = divide_argv(myargv, &offset);
+            char** left_argv = divide_argv(myargv, myargc, &offset);
             printf("%d", offset);
-            char** right_argv = divide_argv(myargv, &offset);
+            char** right_argv = divide_argv(myargv, myargc, &offset);
             printf("%d", offset);
             int left_argc = count_argc(left_argv);
             int right_argc = count_argc(right_argv);
@@ -304,6 +287,9 @@ int main(int argc, char** argv) {
             if (execute_pipe(left_argv, right_argv) != 0) {
                 printf("execute_pipe failed");
             }
+
+            free(left_argv);
+            free(right_argv);
         } else {
             // execvp with fork to not exit program
             if (execute(myargv, myargc) != 0) {
