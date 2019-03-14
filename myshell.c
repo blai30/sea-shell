@@ -71,9 +71,10 @@ void pwd() {
 }
 
 // Parse buffer and count arguments
-char** parse_buffer(char* buf, int* arg_c) {
+char** parse_buffer(char* buf) {
     char** tokens = malloc(sizeof(char*) * 4);
     char* token = strtok(buf, " \n\t\r\v\f");
+    int index = 0;
     while (token != NULL) {
         if (strcmp(token, ">") == 0) {
             rd_output = 1;
@@ -88,35 +89,61 @@ char** parse_buffer(char* buf, int* arg_c) {
             break;
         }
         // arg_c starts at 0
-        tokens[*arg_c] = token;
-        *arg_c += 1;
+        tokens[index] = token;
+        index++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
 
-    tokens[*arg_c] = NULL;  // NULL terminate array
+    tokens[index] = NULL;  // NULL terminate array
 
     return tokens;
 }
 
-void execute_pipe(char** arg_v, int arg_c) {
-    for (int i = 0; ; i++) {
-        if (strcmp(arg_v[i], "|") == 0) {
+// Count the number of args in the array
+int count_argc(char** arg_v) {
+    int count = 0;
+    for (int i = 0; arg_v[i] != NULL; i++) {
+        count++;
+    }
+    return count;
+}
+
+// Split the array into arrays used for pipe. The offset parameter allows this function to be reused
+char** divide_argv(char** arg_v, int* offset) {
+    char** new_argv = malloc(sizeof(char*) * 4);
+
+    int i = *offset;
+    for (; strcmp(arg_v[i], "|") != 0; i++) {
+        if (arg_v[i] == NULL) {
+            break;
+        }
+        new_argv[i] = arg_v[i];
+    }
+    new_argv[i] = NULL;
+
+    *offset = i;
+    return new_argv;
+}
+
+void execute_pipe(char** left_side, char** right_side) {
+//    for (int i = 0; ; i++) {
+//        if (strcmp(arg_v[i], "|") == 0) {
             // Split arg_v into two arrays
             int pipe_fd[2]; /* [0] read end [1] write end */
-            int left_argc = i;
-            int right_argc = arg_c - i - 1;
-            char* left_side[left_argc];
-            char* right_side[right_argc];
+//            int left_argc = i;
+//            int right_argc = arg_c - i - 1;
+//            char* left_side[left_argc];
+//            char* right_side[right_argc];
             int status;
             pid_t pid;
 
-            arg_v[i] = NULL;
+//            arg_v[i] = NULL;
 
-            memcpy(left_side, arg_v, left_argc * sizeof(char*));
-            memcpy(right_side, &arg_v[i], right_argc * sizeof(char*));
-
-            left_side[left_argc] = NULL;
-            right_side[right_argc] = NULL;
+//            memcpy(left_side, arg_v, left_argc * sizeof(char*));
+//            memcpy(right_side, &arg_v[i], right_argc * sizeof(char*));
+//
+//            left_side[left_argc] = NULL;
+//            right_side[right_argc] = NULL;
 
             pipe(pipe_fd);
             pid = fork();
@@ -153,9 +180,9 @@ void execute_pipe(char** arg_v, int arg_c) {
                 }
             }
 
-            break;
-        }
-    }
+//            break;
+//        }
+//    }
 }
 
 // Execute command and arguments
@@ -249,8 +276,8 @@ int main(int argc, char** argv) {
             exit(EXIT_SUCCESS);
         }
 
-        int myargc = 0;
-        char** myargv = parse_buffer(buffer, &myargc);
+        char** myargv = parse_buffer(buffer);
+        int myargc = count_argc(myargv);
 
         if (myargv[0] == NULL) {
             continue;
@@ -259,7 +286,14 @@ int main(int argc, char** argv) {
         } else if (strcmp(myargv[0], "pwd") == 0) {
             pwd();
         } else if (do_pipe) {
-            execute_pipe(myargv, myargc);
+            int offset = 0;
+            char** left_argv = divide_argv(myargv, &offset);
+            printf("%d", offset);
+            char** right_argv = divide_argv(myargv, &offset);
+            printf("%d", offset);
+            int left_argc = count_argc(left_argv);
+            int right_argc = count_argc(right_argv);
+            execute_pipe(left_argv, right_argv);
         } else {
             // execvp with fork to not exit program
             execute(myargv, myargc);
