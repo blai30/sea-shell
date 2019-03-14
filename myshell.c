@@ -112,8 +112,8 @@ int count_argc(char** arg_v) {
 char** divide_argv(char** arg_v, int* offset) {
     char** new_argv = malloc(sizeof(char*) * 4);
 
-    int i = *offset;
-    for (; strcmp(arg_v[i], "|") != 0; i++) {
+    int i;
+    for (i = *offset; strcmp(arg_v[i], "|") != 0; i++) {
         if (arg_v[i] == NULL) {
             break;
         }
@@ -125,7 +125,7 @@ char** divide_argv(char** arg_v, int* offset) {
     return new_argv;
 }
 
-void execute_pipe(char** left_side, char** right_side) {
+int execute_pipe(char** left_side, char** right_side) {
 //    for (int i = 0; ; i++) {
 //        if (strcmp(arg_v[i], "|") == 0) {
             // Split arg_v into two arrays
@@ -150,13 +150,14 @@ void execute_pipe(char** left_side, char** right_side) {
 
             if (pid == 0) {
                 dup2(pipe_fd[0], 0);
-//                close(pipe_fd[1]);
-//                close(pipe_fd[0]);
+                close(pipe_fd[1]);
+                close(pipe_fd[0]);
                 execvp(right_side[0], right_side);
                 perror("Execvp error");
+                return -1;
             } else if (pid < 0) {
                 perror("Fork error: fork() < 0");
-                exit(EXIT_FAILURE);
+                return -1;
             } else {
                 if (!run_in_bg_flag) {
                     waitpid(pid, &status, 0);
@@ -167,13 +168,14 @@ void execute_pipe(char** left_side, char** right_side) {
 
             if (pid == 0) {
                 dup2(pipe_fd[1], 1);
-//                close(pipe_fd[1]);
-//                close(pipe_fd[0]);
+                close(pipe_fd[1]);
+                close(pipe_fd[0]);
                 execvp(left_side[0], left_side);
                 perror("Execvp error");
+                return -1;
             } else if (pid < 0) {
                 perror("Fork error: fork() < 0");
-                exit(EXIT_FAILURE);
+                return -1;
             } else {
                 if (!run_in_bg_flag) {
                     waitpid(pid, &status, 0);
@@ -183,16 +185,18 @@ void execute_pipe(char** left_side, char** right_side) {
 //            break;
 //        }
 //    }
+
+    return 0;
 }
 
 // Execute command and arguments
-void execute(char** arg_v, int arg_c) {
+int execute(char** arg_v, int arg_c) {
     int status;
     pid_t pid = fork();
 
     if (pid < 0) {
         perror("Fork error: fork() < 0");
-        exit(EXIT_FAILURE);
+        return -1;
     } else if (pid == 0) {
         // Output redirection overwrite
         if (rd_output) {
@@ -242,12 +246,15 @@ void execute(char** arg_v, int arg_c) {
         // Execute program or throw error if it fails
         execvp(arg_v[0], arg_v);
         perror("Execvp error");
+        return -1;
     } else {
         // The run-in-background flag '&' will prevent waiting
         if (!run_in_bg_flag) {
             waitpid(pid, &status, 0);
         }
     }
+
+    return 0;
 }
 
 // the project came as int* argc but Souza confirmed it should be int argc
@@ -273,7 +280,7 @@ int main(int argc, char** argv) {
 
         // End program
         if (strcmp(buffer, "exit") == 0) {
-            exit(EXIT_SUCCESS);
+            return 0;
         }
 
         char** myargv = parse_buffer(buffer);
@@ -293,10 +300,15 @@ int main(int argc, char** argv) {
             printf("%d", offset);
             int left_argc = count_argc(left_argv);
             int right_argc = count_argc(right_argv);
-            execute_pipe(left_argv, right_argv);
+
+            if (execute_pipe(left_argv, right_argv) != 0) {
+                printf("execute_pipe failed");
+            }
         } else {
             // execvp with fork to not exit program
-            execute(myargv, myargc);
+            if (execute(myargv, myargc) != 0) {
+                printf("execute failed");
+            }
         }
 
         free(myargv);
