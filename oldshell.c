@@ -75,12 +75,6 @@ char** parse_buffer(char* buf) {
     char** tokens = calloc(8, sizeof(*tokens));
     char* token = strtok(buf, " \n\t\r\v\f");
     int index = 0;
-
-    if (!tokens) {
-        printf("tokens allocation error");
-        exit(EXIT_FAILURE);
-    }
-
     while (token != NULL) {
         if (strcmp(token, ">") == 0) {
             rd_output = 1;
@@ -107,11 +101,51 @@ char** parse_buffer(char* buf) {
 
 // Count the number of args in the array
 int count_argc(char** arg_v) {
-    int i = 0;
-    for (; arg_v[i] != NULL; i++) {
-
+    int count = 0;
+    for (int i = 0; arg_v[i] != NULL; i++) {
+        count++;
     }
-    return i;
+    return count;
+}
+
+// Split the array into arrays used for pipe. The offset parameter allows this function to be reused
+//char** divide_argv(char** arg_v, int arg_c, int* offset) {
+//    char** new_argv = calloc(4, sizeof(*new_argv));
+//
+//    int i;
+//    for (i = *offset; i < arg_c; i++) {
+//        if (strcmp(arg_v[i], "|") == 0) {
+//            break;
+//        }
+//        new_argv[i] = arg_v[i];
+//    }
+//    free(new_argv[i]);
+//    new_argv[i] = NULL;
+//
+//    *offset = i;
+//    return new_argv;
+//}
+
+char** leftargv(char** arg_v, int arg_c) {
+    char** new_argv = calloc(4, sizeof(*new_argv));
+    int i;
+    for (i = 0; strcmp(arg_v[i], "|") != 0; i++) {
+        new_argv[i] = arg_v[i];
+    }
+    new_argv[i] = NULL;
+
+    return new_argv;
+}
+
+char** rightargv(char** arg_v, int arg_c, int leftargc) {
+    char** new_argv = calloc(4, sizeof(*new_argv));
+    int i = leftargc;
+    new_argv[i] = NULL;
+    for (; i < arg_c - 1; i++) {
+        new_argv[i] = arg_v[i];
+    }
+
+    return new_argv;
 }
 
 // Execute command and arguments
@@ -252,6 +286,8 @@ int main(int argc, char** argv) {
         }
 
         char** myargv = parse_buffer(buffer);
+//        char* myargv[6] = {"ls", "-la", "|", "wc", "-l", NULL};
+//        do_pipe = 1;
         int myargc = count_argc(myargv);
 
         if (myargv[0] == NULL) {
@@ -261,23 +297,12 @@ int main(int argc, char** argv) {
         } else if (strcmp(myargv[0], "pwd") == 0) {
             pwd();
         } else if (do_pipe) {
-            size_t cutoff_index = 0;
-            for (size_t i = 0; myargv[i] != NULL; i++) {
-                if (strncmp(myargv[i], "|", sizeof(char*)) == 0) {
-                    cutoff_index = i;
-                }
-            }
-            char** left_argv = malloc((cutoff_index + 1) * sizeof(char*));
+            char** left_argv = leftargv(myargv, myargc);
             int left_argc = count_argc(left_argv);
-            char** left = memcpy(left_argv, myargv, cutoff_index + 1);
-            left[cutoff_index] = NULL;
-
-            char** right_argv = malloc((myargc - cutoff_index) * sizeof(char*));
+            char** right_argv = rightargv(myargv, myargc, left_argc);
             int right_argc = count_argc(right_argv);
-            char** right = memcpy(right_argv, myargv, myargc - cutoff_index);
-            right[myargc - cutoff_index] = NULL;
 
-            if (exe_pipe(left, right, left_argc, right_argc) != 0) {
+            if (exe_pipe(left_argv, right_argv, left_argc, right_argc) != 0) {
                 printf("exe_pipe failed");
             }
 
@@ -290,6 +315,7 @@ int main(int argc, char** argv) {
             }
         }
 
+//        free(myargv);
     }
 
     return 0;
