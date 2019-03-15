@@ -72,7 +72,7 @@ void pwd() {
 
 // Parse buffer and count arguments
 char** parse_buffer(char* buf) {
-    char** tokens = calloc(9, sizeof(*tokens));
+    char** tokens = calloc(8, sizeof(*tokens));
     char* token = strtok(buf, " \n\t\r\v\f");
     int index = 0;
     while (token != NULL) {
@@ -109,71 +109,47 @@ int count_argc(char** arg_v) {
 }
 
 // Split the array into arrays used for pipe. The offset parameter allows this function to be reused
-char** divide_argv(char** arg_v, int arg_c, int* offset) {
-    char** new_argv = calloc(5, sizeof(*new_argv));
+//char** divide_argv(char** arg_v, int arg_c, int* offset) {
+//    char** new_argv = calloc(4, sizeof(*new_argv));
+//
+//    int i;
+//    for (i = *offset; i < arg_c; i++) {
+//        if (strcmp(arg_v[i], "|") == 0) {
+//            break;
+//        }
+//        new_argv[i] = arg_v[i];
+//    }
+//    free(new_argv[i]);
+//    new_argv[i] = NULL;
+//
+//    *offset = i;
+//    return new_argv;
+//}
 
+char** leftargv(char** arg_v, int arg_c) {
+    char** new_argv = calloc(4, sizeof(*new_argv));
     int i;
-    for (i = *offset; strcmp(arg_v[i], "|") != 0 || i < arg_c; i++) {
+    for (i = 0; strcmp(arg_v[i], "|") != 0; i++) {
         new_argv[i] = arg_v[i];
     }
-
-//    ptrdiff_t len = (strchr(*arg_v,'|') - *arg_v) * sizeof(char*);
-//    strncpy(*new_argv, *arg_v, len);
-
-    free(new_argv[i]);
     new_argv[i] = NULL;
 
-    *offset = i;
     return new_argv;
 }
 
-int execute_pipe(char** left_side, char** right_side) {
-    int pipe_fd[2]; /* [0] read end [1] write end */
-    int status;
-    pid_t pid;
-
-    pipe(pipe_fd);
-    pid = fork();
-
-    if (pid == 0) {
-        dup2(pipe_fd[0], 0);
-        close(pipe_fd[1]);
-        close(pipe_fd[0]);
-        execvp(right_side[0], right_side);
-        perror("Execvp error");
-        return -1;
-    } else if (pid < 0) {
-        perror("Fork error: fork() < 0");
-        return -1;
-    } else {
-        if (!run_in_bg_flag) {
-            waitpid(pid, &status, 0);
-        }
+char** rightargv(char** arg_v, int arg_c, int leftargc) {
+    char** new_argv = calloc(4, sizeof(*new_argv));
+    int i = leftargc;
+    new_argv[i] = NULL;
+    for (; i < arg_c - 1; i++) {
+        new_argv[i] = arg_v[i];
     }
 
-    pid = fork();
-
-    if (pid == 0) {
-        dup2(pipe_fd[1], 1);
-        close(pipe_fd[1]);
-        close(pipe_fd[0]);
-        execvp(left_side[0], left_side);
-        perror("Execvp error");
-        return -1;
-    } else if (pid < 0) {
-        perror("Fork error: fork() < 0");
-        return -1;
-    } else {
-        if (!run_in_bg_flag) {
-            waitpid(pid, &status, 0);
-        }
-    }
-
-    return 0;
+    return new_argv;
 }
 
 // Execute command and arguments
-int execute(char** arg_v, int arg_c) {
+int exe(char **arg_v, int arg_c) {
     int status;
     pid_t pid = fork();
 
@@ -240,6 +216,49 @@ int execute(char** arg_v, int arg_c) {
     return 0;
 }
 
+int exe_pipe(char **left_side, char **right_side, int left_argc, int right_argc) {
+    int pipe_fd[2]; /* [0] read end [1] write end */
+    int status;
+    pid_t pid;
+
+    pipe(pipe_fd);
+    pid = fork();
+
+    if (pid == 0) {
+        dup2(pipe_fd[0], 0);
+        close(pipe_fd[1]);
+        execvp(right_side[0], right_side);
+        perror("Execvp error");
+        return -1;
+    } else if (pid < 0) {
+        perror("Fork error: fork() < 0");
+        return -1;
+    } else {
+        if (!run_in_bg_flag) {
+            waitpid(pid, &status, 0);
+        }
+    }
+
+    pid = fork();
+
+    if (pid == 0) {
+        dup2(pipe_fd[1], 1);
+        close(pipe_fd[0]);
+        execvp(left_side[0], left_side);
+        perror("Execvp error");
+        return -1;
+    } else if (pid < 0) {
+        perror("Fork error: fork() < 0");
+        return -1;
+    } else {
+        if (!run_in_bg_flag) {
+            waitpid(pid, &status, 0);
+        }
+    }
+
+    return 0;
+}
+
 // the project came as int* argc but Souza confirmed it should be int argc
 int main(int argc, char** argv) {
 
@@ -267,6 +286,8 @@ int main(int argc, char** argv) {
         }
 
         char** myargv = parse_buffer(buffer);
+//        char* myargv[6] = {"ls", "-la", "|", "wc", "-l", NULL};
+//        do_pipe = 1;
         int myargc = count_argc(myargv);
 
         if (myargv[0] == NULL) {
@@ -276,28 +297,25 @@ int main(int argc, char** argv) {
         } else if (strcmp(myargv[0], "pwd") == 0) {
             pwd();
         } else if (do_pipe) {
-            int offset = 0;
-            char** left_argv = divide_argv(myargv, myargc, &offset);
-            printf("%d", offset);
-            char** right_argv = divide_argv(myargv, myargc, &offset);
-            printf("%d", offset);
+            char** left_argv = leftargv(myargv, myargc);
             int left_argc = count_argc(left_argv);
+            char** right_argv = rightargv(myargv, myargc, left_argc);
             int right_argc = count_argc(right_argv);
 
-            if (execute_pipe(left_argv, right_argv) != 0) {
-                printf("execute_pipe failed");
+            if (exe_pipe(left_argv, right_argv, left_argc, right_argc) != 0) {
+                printf("exe_pipe failed");
             }
 
             free(left_argv);
             free(right_argv);
         } else {
             // execvp with fork to not exit program
-            if (execute(myargv, myargc) != 0) {
-                printf("execute failed");
+            if (exe(myargv, myargc) != 0) {
+                printf("exe failed");
             }
         }
 
-        free(myargv);
+//        free(myargv);
     }
 
     return 0;
