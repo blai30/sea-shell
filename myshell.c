@@ -268,14 +268,16 @@ int main(int argc, char** argv) {
                 }
             }
             char** left_argv = malloc((cutoff_index + 1) * sizeof(char*));
+            free(left_argv[cutoff_index]);
             int left_argc = count_argc(left_argv);
             char** left = memcpy(left_argv, myargv, cutoff_index + 1);
             left[cutoff_index] = NULL;
 
             char** right_argv = malloc((myargc - cutoff_index) * sizeof(char*));
+            free(right_argv[myargc - cutoff_index - 1]);
             int right_argc = count_argc(right_argv);
             char** right = memcpy(right_argv, myargv, myargc - cutoff_index);
-            right[myargc - cutoff_index] = NULL;
+            right[myargc - cutoff_index - 1] = NULL;
 
             if (exe_pipe(left, right, left_argc, right_argc) != 0) {
                 printf("exe_pipe failed");
