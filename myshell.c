@@ -23,6 +23,7 @@
 #define PROMPT "myShell %s >> "
 #define PROMPTSIZE sizeof(PROMPT)
 
+int myargc;
 int run_in_bg_flag;
 int rd_output;
 int rd_output_append;
@@ -74,7 +75,6 @@ void pwd() {
 char** parse_buffer(char* buf) {
     char** tokens = calloc(8, sizeof(*tokens));
     char* token = strtok(buf, " \n\t\r\v\f");
-    int index = 0;
 
     if (!tokens) {
         printf("tokens allocation error");
@@ -95,12 +95,11 @@ char** parse_buffer(char* buf) {
             break;
         }
         // arg_c starts at 0
-        tokens[index] = token;
-        index++;
+        tokens[myargc] = token;
+        myargc++;
         token = strtok(NULL, " \n\t\r\v\f");
     }
-    free(tokens[index]);
-    tokens[index] = NULL;  // NULL terminate array
+    tokens[myargc] = NULL;  // NULL terminate array
 
     return tokens;
 }
@@ -182,17 +181,22 @@ int exe(char **arg_v, int arg_c) {
     return 0;
 }
 
-int exe_pipe(char **left_side, char **right_side, int left_argc, int right_argc) {
+int exe_pipe(char **left_side, char **right_side) {
     int pipe_fd[2]; /* [0] read end [1] write end */
     int status;
     pid_t pid;
 
-    pipe(pipe_fd);
+    if (pipe(pipe_fd) < 0) {
+        perror("Pipe error");
+        exit(EXIT_FAILURE);
+    }
+
     pid = fork();
 
     if (pid == 0) {
         dup2(pipe_fd[0], 0);
         close(pipe_fd[1]);
+        close(pipe_fd[0]);
         execvp(right_side[0], right_side);
         perror("Execvp error");
         return -1;
@@ -201,7 +205,7 @@ int exe_pipe(char **left_side, char **right_side, int left_argc, int right_argc)
         return -1;
     } else {
         if (!run_in_bg_flag) {
-            waitpid(pid, &status, 0);
+            waitpid(pid, &status, WNOHANG);
         }
     }
 
@@ -209,6 +213,7 @@ int exe_pipe(char **left_side, char **right_side, int left_argc, int right_argc)
 
     if (pid == 0) {
         dup2(pipe_fd[1], 1);
+        close(pipe_fd[1]);
         close(pipe_fd[0]);
         execvp(left_side[0], left_side);
         perror("Execvp error");
@@ -218,9 +223,12 @@ int exe_pipe(char **left_side, char **right_side, int left_argc, int right_argc)
         return -1;
     } else {
         if (!run_in_bg_flag) {
-            waitpid(pid, &status, 0);
+            waitpid(pid, &status, WNOHANG);
         }
     }
+
+    close(pipe_fd[0]);
+    close(pipe_fd[1]);
 
     return 0;
 }
@@ -233,6 +241,8 @@ int main(int argc, char** argv) {
     while (1) {
         // Reset buffer and flag
         char buffer[BUFFERSIZE];
+        memset(&buffer[0],'\0', BUFFERSIZE);
+        myargc = 0;
         run_in_bg_flag = 0;
         rd_output = 0;
         rd_output_append = 0;
@@ -248,11 +258,10 @@ int main(int argc, char** argv) {
 
         // End program
         if (strcmp(buffer, "exit") == 0) {
-            return 0;
+            exit(EXIT_SUCCESS);
         }
 
         char** myargv = parse_buffer(buffer);
-        int myargc = count_argc(myargv);
 
         if (myargv[0] == NULL) {
             continue;
@@ -261,28 +270,34 @@ int main(int argc, char** argv) {
         } else if (strcmp(myargv[0], "pwd") == 0) {
             pwd();
         } else if (do_pipe) {
-            size_t cutoff_index = 0;
-            for (size_t i = 0; myargv[i] != NULL; i++) {
+            int cutoff_index = 0;
+            for (int i = 0; i < myargc; i++) {
                 if (strncmp(myargv[i], "|", sizeof(char*)) == 0) {
                     cutoff_index = i;
                 }
             }
-            char** left_argv = malloc((cutoff_index + 1) * sizeof(char*));
-            int left_argc = count_argc(left_argv);
-            char** left = memcpy(left_argv, myargv, cutoff_index + 1);
-            left[cutoff_index] = NULL;
 
-            char** right_argv = malloc((myargc - cutoff_index) * sizeof(char*));
-            int right_argc = count_argc(right_argv);
-            char** right = memcpy(right_argv, myargv, myargc - cutoff_index);
-            right[myargc - cutoff_index - 1] = NULL;
+            char* left_argv[4 * sizeof(char*)];
+            char* right_argv[4 * sizeof(char*)];
+            int i;
+            for (i = 0; i < cutoff_index; i++) {
+                left_argv[i] = myargv[i];
+            }
+            left_argv[i] = NULL;
 
-            if (exe_pipe(left, right, left_argc, right_argc) != 0) {
-                printf("exe_pipe failed");
+            int j;
+            for (i = cutoff_index + 1, j = 0; i < myargc; i++, j++) {
+                right_argv[j] = myargv[i];
+            }
+            right_argv[j] = NULL;
+
+            if (exe_pipe(left_argv, right_argv) != 0) {
+                perror("exe_pipe failed");
+                exit(EXIT_FAILURE);
             }
 
-            free(left_argv);
-            free(right_argv);
+            memset(left_argv, '\0', sizeof(left_argv));
+            memset(right_argv, '\0', sizeof(right_argv));
         } else {
             // execvp with fork to not exit program
             if (exe(myargv, myargc) != 0) {
