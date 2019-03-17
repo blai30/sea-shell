@@ -73,11 +73,11 @@ void pwd() {
 
 // Parse buffer and count arguments
 char** parse_buffer(char* buf) {
-    char** tokens = calloc(8, sizeof(*tokens));
+    char** tokens = malloc(8 * sizeof(*tokens));
     char* token = strtok(buf, " \n\t\r\v\f");
 
     if (!tokens) {
-        printf("tokens allocation error");
+        printf("tokens allocation error\n");
         exit(EXIT_FAILURE);
     }
 
@@ -119,7 +119,7 @@ int exe(char **arg_v, int arg_c) {
     pid_t pid = fork();
 
     if (pid < 0) {
-        perror("Fork error: fork() < 0");
+        perror("Fork error: fork() < 0\n");
         return -1;
     } else if (pid == 0) {
         // Output redirection overwrite
@@ -169,7 +169,7 @@ int exe(char **arg_v, int arg_c) {
 
         // Execute program or throw error if it fails
         execvp(arg_v[0], arg_v);
-        perror("Execvp error");
+        perror("Execvp error\n");
         return -1;
     } else {
         // The run-in-background flag '&' will prevent waiting
@@ -187,7 +187,7 @@ int exe_pipe(char **left_side, char **right_side) {
     pid_t pid;
 
     if (pipe(pipe_fd) < 0) {
-        perror("Pipe error");
+        perror("Pipe error\n");
         exit(EXIT_FAILURE);
     }
 
@@ -198,10 +198,10 @@ int exe_pipe(char **left_side, char **right_side) {
         close(pipe_fd[1]);
         close(pipe_fd[0]);
         execvp(right_side[0], right_side);
-        perror("Execvp error");
+        perror("Execvp error\n");
         return -1;
     } else if (pid < 0) {
-        perror("Fork error: fork() < 0");
+        perror("Fork error: fork() < 0\n");
         return -1;
     } else {
         if (!run_in_bg_flag) {
@@ -216,10 +216,10 @@ int exe_pipe(char **left_side, char **right_side) {
         close(pipe_fd[1]);
         close(pipe_fd[0]);
         execvp(left_side[0], left_side);
-        perror("Execvp error");
+        perror("Execvp error\n");
         return -1;
     } else if (pid < 0) {
-        perror("Fork error: fork() < 0");
+        perror("Fork error: fork() < 0\n");
         return -1;
     } else {
         if (!run_in_bg_flag) {
@@ -263,6 +263,11 @@ int main(int argc, char** argv) {
 
         char** myargv = parse_buffer(buffer);
 
+        if (myargc > 4 && do_pipe == 0) {
+            printf("Too many arguments. (Maximum number of arguments: 4)\n");
+            continue;
+        }
+
         if (myargv[0] == NULL) {
             continue;
         } else if (strcmp(myargv[0], "cd") == 0) {
@@ -279,6 +284,7 @@ int main(int argc, char** argv) {
 
             char* left_argv[4 * sizeof(char*)];
             char* right_argv[4 * sizeof(char*)];
+
             int i;
             for (i = 0; i < cutoff_index; i++) {
                 left_argv[i] = myargv[i];
@@ -291,8 +297,13 @@ int main(int argc, char** argv) {
             }
             right_argv[j] = NULL;
 
+            if (i - 1 > 4 || j - 1 > 4) {
+                printf("Too many arguments. (Maximum number of arguments: 4)\n");
+                continue;
+            }
+
             if (exe_pipe(left_argv, right_argv) != 0) {
-                perror("exe_pipe failed");
+                perror("exe_pipe failed\n");
                 exit(EXIT_FAILURE);
             }
 
@@ -301,7 +312,7 @@ int main(int argc, char** argv) {
         } else {
             // execvp with fork to not exit program
             if (exe(myargv, myargc) != 0) {
-                printf("exe failed");
+                printf("exe failed\n");
             }
         }
 
