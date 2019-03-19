@@ -51,6 +51,7 @@ If `make` was used
 
 ## What the program does
 A simple command-line interface shell program that is capable of executing programs by parsing a given string. This shell program is also able to change and print the current working directory.
+I helped a student named Joseph Tawil on Slack and shared part of my code with him, specifically the exe function. This is a disclaimer to notify graders and professor Souza in case there are any suspicions.
 
 ## List Extra Credit comepleted (if not attempted leave blank)
 * (10 - Points) Implement the shell so the current working directory is shown on the prompt.
